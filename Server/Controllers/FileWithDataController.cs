@@ -32,11 +32,21 @@ namespace FileTransferazor.Server.Controllers
         public async Task<IActionResult> Upload([FromForm] FormDataDto dto)
         {
             // TODO: uploadresult return
-            // TODO: request file size disable
             // TODO: server resources monitoring
+
+            if (dto.FileToUploads.Count == 0 || dto.FileToUploads.Any(f => f.Length == 0))
+            {
+                return BadRequest("Upload one more files or not empty file.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Data.ReceiverEmail) || string.IsNullOrWhiteSpace(dto.Data.SenderEmail))
+            {
+                return BadRequest("SenderEmail or ReceiverEmail is empty.");
+            }
 
             await _fileRepository.UploadFileToS3Async(dto.Data, dto.FileToUploads);
 
+            // TODO: return Created
             return Ok();
         }
     }

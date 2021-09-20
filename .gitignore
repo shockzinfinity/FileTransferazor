@@ -390,3 +390,4 @@ FodyWeavers.xsd
 appsettings.json
 credential.json
 .DS_Store
+token.json

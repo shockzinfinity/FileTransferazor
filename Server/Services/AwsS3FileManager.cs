@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace FileTransferazor.Server.Services
@@ -74,7 +75,7 @@ namespace FileTransferazor.Server.Services
 
         public async Task<string> UploadFileAsync(string fileName, Stream fileStream)
         {
-            var s3FileName = $"{DateTime.Now.Ticks}-{fileName}";
+            var s3FileName = $"{DateTime.Now.Ticks}-{WebUtility.HtmlEncode(fileName)}";
 
             var transferRequest = new TransferUtilityUploadRequest()
             {

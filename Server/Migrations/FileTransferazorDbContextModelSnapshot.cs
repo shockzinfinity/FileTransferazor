@@ -49,6 +49,9 @@ namespace FileTransferazor.Server.Migrations
                     b.Property<string>("FileUri")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("OriginalFileName")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("FileSendDataId");

@@ -62,7 +62,8 @@ namespace FileTransferazor.Server.Repositories
                 // TODO: anti malware, virus scan
                 // TODO: file name html encoding
                 // TODO: gzip
-                var s3FileName = await _s3FileManager.UploadFileAsync(item.FileName, item.OpenReadStream());
+
+                var s3FileName = await _s3FileManager.UploadFileAsync(Path.GetRandomFileName(), item.OpenReadStream());
                 scheduledFiles.Add(s3FileName);
                 _dbContext.FileStorageDatas.Add(new FileStorageData
                 {
@@ -75,19 +76,23 @@ namespace FileTransferazor.Server.Repositories
 
             await _dbContext.SaveChangesAsync();
 
-            if(scheduledFiles.Count > 0)
+            if (scheduledFiles.Count > 0)
             {
                 foreach (var item in scheduledFiles)
                 {
                     _backgroundJobClient.Schedule<IAwsS3FileManager>(f => f.DeleteFileAsync(item), TimeSpan.FromHours(24));
-                    
+
                 }
-                _backgroundJobClient.Enqueue<IEmailSender>(e => e.SendEmail(
+                //_backgroundJobClient.Enqueue<IEmailSender>(e => e.SendEmail(
+                //        fileSendData.ReceiverEmail,
+                //        "You received a new file",
+                //        EmailConstructorHelpers.CreatedNewFileReceivedEmailBody(scheduledFiles, fileSendData.SenderEmail)));
+                _backgroundJobClient.Enqueue<IEmailSender>(e => e.SendEmailApi(
                         fileSendData.ReceiverEmail,
                         "You received a new file",
                         EmailConstructorHelpers.CreatedNewFileReceivedEmailBody(scheduledFiles, fileSendData.SenderEmail)));
             }
-            
+
         }
     }
 }

@@ -42,6 +42,7 @@ namespace FileTransferazor.Client.Pages
             Logger.LogInformation(await response.Content.ReadAsStringAsync());
 
             await ExecuteDialog();
+            loadedFiles.Clear();
         }
 
         public void HandleSelected(InputFileChangeEventArgs e)
