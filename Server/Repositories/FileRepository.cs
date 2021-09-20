@@ -31,6 +31,7 @@ namespace FileTransferazor.Server.Repositories
 
         public async Task<TransferFile> DownloadFileAsync(string fileName)
         {
+            // TODO: gzip
             var dbFileData = await _dbContext.FileStorageDatas.Include(f => f.FileSendData).SingleOrDefaultAsync(f => f.FileUri == fileName);
             if (dbFileData == null)
             {
@@ -60,6 +61,7 @@ namespace FileTransferazor.Server.Repositories
                 // TODO: server file validation
                 // TODO: anti malware, virus scan
                 // TODO: file name html encoding
+                // TODO: gzip
                 var s3FileName = await _s3FileManager.UploadFileAsync(item.FileName, item.OpenReadStream());
                 scheduledFiles.Add(s3FileName);
                 _dbContext.FileStorageDatas.Add(new FileStorageData
