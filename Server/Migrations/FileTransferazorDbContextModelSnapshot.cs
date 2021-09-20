@@ -38,13 +38,20 @@ namespace FileTransferazor.Server.Migrations
 
             modelBuilder.Entity("FileTransferazor.Shared.FileStorageData", b =>
                 {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
                     b.Property<int>("FileSendDataId")
                         .HasColumnType("int");
 
                     b.Property<string>("FileUri")
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("FileSendDataId");
+                    b.HasKey("Id");
+
+                    b.HasIndex("FileSendDataId");
 
                     b.ToTable("FileStorageDatas");
                 });

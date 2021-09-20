@@ -49,19 +49,19 @@ namespace FileTransferazor.Server.Repositories
 
             foreach (var item in files)
             {
-                var s3FileName = await _s3FileManager.UploadFileAsync(item.Name, item.OpenReadStream());
+                // TODO: upload result list
+                // TODO: server file validation
+                // TODO: anti malware, virus scan
+                // TODO: file name html encoding
+                var s3FileName = await _s3FileManager.UploadFileAsync(item.FileName, item.OpenReadStream());
                 _dbContext.FileStorageDatas.Add(new FileStorageData
                 {
                     FileSendDataId = fileSendData.Id,
-                    FileUri = s3FileName
+                    FileSendData = fileSendData,
+                    FileUri = s3FileName,
+                    OriginalFileName = item.FileName
                 });
             }
-            //var s3FileName = await _s3FileManager.UploadFileAsync(fileName, fileStream);
-            //_dbContext.FileStorageDatas.Add(new FileStorageData
-            //{
-            //    FileSendDataId = fileSendData.Id,
-            //    FileUri = s3FileName
-            //});
 
             await _dbContext.SaveChangesAsync();
         }

@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FileTransferazor.Server.Migrations
 {
     [DbContext(typeof(FileTransferazorDbContext))]
-    [Migration("20210920021743_FileData")]
+    [Migration("20210920062351_FileData")]
     partial class FileData
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -40,13 +40,20 @@ namespace FileTransferazor.Server.Migrations
 
             modelBuilder.Entity("FileTransferazor.Shared.FileStorageData", b =>
                 {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
                     b.Property<int>("FileSendDataId")
                         .HasColumnType("int");
 
                     b.Property<string>("FileUri")
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("FileSendDataId");
+                    b.HasKey("Id");
+
+                    b.HasIndex("FileSendDataId");
 
                     b.ToTable("FileStorageDatas");
                 });

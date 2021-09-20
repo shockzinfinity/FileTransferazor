@@ -74,15 +74,15 @@ namespace FileTransferazor.Server.Services
 
         public async Task<string> UploadFileAsync(string fileName, Stream fileStream)
         {
-            var ms = new MemoryStream(); // TODO: filestream 으로 전환?
-            await fileStream.CopyToAsync(ms);
+            //var ms = new MemoryStream();
+            //await fileStream.CopyToAsync(ms);
 
             var s3FileName = $"{DateTime.Now.Ticks}-{fileName}";
 
             var transferRequest = new TransferUtilityUploadRequest()
             {
                 ContentType = "application/zip",
-                InputStream = ms,
+                InputStream = fileStream,
                 BucketName = _bucket,
                 Key = s3FileName
             };
