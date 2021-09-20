@@ -8,6 +8,10 @@ using Microsoft.Extensions.Hosting;
 using System.Linq;
 using FileTransferazor.Server.Data;
 using Microsoft.EntityFrameworkCore;
+using FileTransferazor.Server.Services;
+using Amazon;
+using Amazon.S3;
+using FileTransferazor.Server.Repositories;
 
 namespace FileTransferazor.Server
 {
@@ -19,6 +23,7 @@ namespace FileTransferazor.Server
         }
 
         public IConfiguration Configuration { get; }
+        public AwsParameterStoreClient AwsParameterStoreClient { get { return new AwsParameterStoreClient(RegionEndpoint.APNortheast2); } }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -27,7 +32,12 @@ namespace FileTransferazor.Server
             services.AddDbContext<FileTransferazorDbContext>(options =>
             {
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"));
+                //options.UseSqlServer(AwsParameterStoreClient.GetValue("FileTransferazorDb"));
             });
+
+            services.AddAWSService<IAmazonS3>();
+            services.AddScoped<IAwsS3FileManager, AwsS3FileManager>();
+            services.AddScoped<IFileRepository, FileRepository>();
 
             services.AddControllersWithViews();
             services.AddRazorPages();
