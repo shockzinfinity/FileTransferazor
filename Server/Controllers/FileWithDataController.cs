@@ -27,15 +27,11 @@ namespace FileTransferazor.Server.Controllers
         [HttpPost]
         public async Task<IActionResult> Upload([FromForm] FormDataDto dto)
         {
+            // TODO: uploadresult return
+            // TODO: request file size disable
+            // TODO: server resources monitoring
+
             await _fileRepository.UploadFileToS3Async(dto.Data, dto.FileToUploads);
-            //_logger.LogInformation(dto.Data.SenderEmail);
-            //_logger.LogInformation(dto.Data.ReceiverEmail);
-            //foreach (var item in dto.FileToUploads)
-            //{
-            //    _logger.LogInformation(item.FileName);
-            //    _logger.LogInformation(item.ContentType);
-            //    _logger.LogInformation(item.Length.ToString());
-            //}
 
             return Ok();
         }

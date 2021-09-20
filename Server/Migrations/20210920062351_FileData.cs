@@ -24,12 +24,14 @@ namespace FileTransferazor.Server.Migrations
                 name: "FileStorageDatas",
                 columns: table => new
                 {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     FileSendDataId = table.Column<int>(type: "int", nullable: false),
                     FileUri = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_FileStorageDatas", x => x.FileSendDataId);
+                    table.PrimaryKey("PK_FileStorageDatas", x => x.Id);
                     table.ForeignKey(
                         name: "FK_FileStorageDatas_FileSendDatas_FileSendDataId",
                         column: x => x.FileSendDataId,
@@ -37,6 +39,11 @@ namespace FileTransferazor.Server.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FileStorageDatas_FileSendDataId",
+                table: "FileStorageDatas",
+                column: "FileSendDataId");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
