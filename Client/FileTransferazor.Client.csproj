@@ -23,5 +23,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Components\" />
+    <Folder Include="HttpRepositories\" />
   </ItemGroup>
 </Project>
