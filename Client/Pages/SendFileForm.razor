@@ -1,0 +1,38 @@
+﻿<div class="sendFileForm">
+    <EditForm Model="_fileSendData" OnValidSubmit="HandleValidSubmit" class="card card-body bg-light mt-5">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <MudCard>
+            <MudCardContent>
+                <MudTextField Label="Sender Email" @bind-Value="_fileSendData.SenderEmail" For="@(() => _fileSendData.SenderEmail)" />
+                <MudTextField Label="Receiver Email" @bind-Value="_fileSendData.ReceiverEmail" For="@(() => _fileSendData.ReceiverEmail)" />
+
+                <InputFile id="fileInput" OnChange="HandleSelected" hidden multiple />
+                <MudButton HtmlTag="label" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Filled.CloudUpload" Class="my-3" for="fileInput">Upload</MudButton>
+                @if (_isLoading)
+                {
+                    <p>Loading...</p>
+                }
+                else
+                {
+                    <ul>
+                        @foreach (var item in loadedFiles)
+                        {
+                            <li>
+                                <ul>
+                                    <li>Name: @item.Name</li>
+                                    <li>Last modified: @item.LastModified</li>
+                                    <li>Size (bytes): @item.Size</li>
+                                    <li>Content type: @item.ContentType</li>
+                                </ul>
+                            </li>
+                        }
+                    </ul>
+                }
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Send</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </EditForm>
+</div>
