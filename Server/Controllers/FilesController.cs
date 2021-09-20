@@ -28,12 +28,11 @@ namespace FileTransferazor.Server.Controllers
                 return Redirect("/");
             }
 
-            // TODO: large file stream
-            // TODO: multiple files ?
-            var content = new System.IO.MemoryStream(file.Content);
-            var contentType = "application/octet-stream"; // TODO: db save?
+            // NOTE: multiple files => doesn't need it because the receiver click individual link
+            //var content = new System.IO.MemoryStream(file.Content);
+            var contentType = "application/octet-stream";
 
-            return File(content, contentType, file.Name);
+            return File(file.Content, contentType, file.Name);
         }
     }
 }

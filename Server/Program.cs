@@ -20,7 +20,11 @@ namespace FileTransferazor.Server
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseStartup<Startup>();
+                    webBuilder.ConfigureKestrel((context, options) =>
+                    {
+                        // Handle requests up to 50 MB
+                        options.Limits.MaxRequestBodySize = 10L * 1024L * 1024L * 1024L; // 10 GB
+                    }).UseStartup<Startup>();
                 });
     }
 }
