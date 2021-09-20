@@ -12,6 +12,7 @@ using FileTransferazor.Server.Services;
 using Amazon;
 using Amazon.S3;
 using FileTransferazor.Server.Repositories;
+using Hangfire;
 
 namespace FileTransferazor.Server
 {
@@ -35,9 +36,14 @@ namespace FileTransferazor.Server
                 //options.UseSqlServer(AwsParameterStoreClient.GetValue("FileTransferazorDb"));
             });
 
+            services.AddHangfire(x => x.UseSqlServerStorage(Configuration.GetConnectionString("DefaultConnection")));
+            services.AddHangfireServer();
+
+            services.AddScoped(sp => new AwsParameterStoreClient(RegionEndpoint.APNortheast2));
             services.AddAWSService<IAmazonS3>();
             services.AddScoped<IAwsS3FileManager, AwsS3FileManager>();
             services.AddScoped<IFileRepository, FileRepository>();
+            services.AddScoped<IEmailSender, GmailEmailSender>();
 
             services.AddControllersWithViews();
             services.AddRazorPages();
@@ -46,6 +52,8 @@ namespace FileTransferazor.Server
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            app.UseHangfireDashboard(); // TODO: production level 에서는 안뜨도록 env.IsDevelopment() 로 넘겨야 함
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
