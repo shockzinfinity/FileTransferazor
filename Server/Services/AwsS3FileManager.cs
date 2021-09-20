@@ -38,7 +38,7 @@ namespace FileTransferazor.Server.Services
             {
                 throw;
             }
-            catch(Exception)
+            catch (Exception)
             {
                 throw;
             }
@@ -62,14 +62,11 @@ namespace FileTransferazor.Server.Services
                 }
 
                 using (var responseStream = objectReference.ResponseStream)
-                using (var reader = new StreamReader(responseStream))
                 {
-                    var result = new MemoryStream();
-                    responseStream.CopyTo(result);
                     return new TransferFile
                     {
                         Name = fileName,
-                        Content = result.ToArray()
+                        Content = responseStream
                     };
                 }
             }

@@ -15,6 +15,7 @@ namespace FileTransferazor.Client.Pages
 {
     public partial class SendFileForm
     {
+        private const long MaxFileSize = 10L * 1024L * 1024L * 1024L; // 10 GB
         private FileSendData _fileSendData = new FileSendData();
         [Inject] public IDialogService Dialog { get; set; }
         [Inject] public NavigationManager NavigationManager { get; set; }
@@ -30,7 +31,7 @@ namespace FileTransferazor.Client.Pages
 
             foreach (var item in loadedFiles)
             {
-                var fileStreamContent = new StreamContent(item.OpenReadStream());
+                var fileStreamContent = new StreamContent(item.OpenReadStream(MaxFileSize));
                 fileStreamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(item.ContentType);
                 content.Add(content: fileStreamContent, name: "\"FileToUploads\"", fileName: item.Name);
             }
@@ -43,7 +44,7 @@ namespace FileTransferazor.Client.Pages
             await ExecuteDialog();
         }
 
-        public async Task HandleSelected(InputFileChangeEventArgs e)
+        public void HandleSelected(InputFileChangeEventArgs e)
         {
             _isLoading = true;
             loadedFiles.Clear();

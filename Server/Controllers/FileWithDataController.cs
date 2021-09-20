@@ -15,6 +15,7 @@ namespace FileTransferazor.Server.Controllers
     [ApiController]
     public class FileWithDataController : ControllerBase
     {
+        private const long MaxFileSize = 10L * 1024L * 1024L * 1024L; // 10 GB
         private readonly IFileRepository _fileRepository;
         private readonly ILogger<FileWithDataController> _logger;
 
@@ -25,6 +26,9 @@ namespace FileTransferazor.Server.Controllers
         }
 
         [HttpPost]
+        //[DisableFormValueModelBinding] // NOTE: form data binding 안됨
+        [RequestSizeLimit(MaxFileSize)]
+        [RequestFormLimits(MultipartBodyLengthLimit = MaxFileSize)]
         public async Task<IActionResult> Upload([FromForm] FormDataDto dto)
         {
             // TODO: uploadresult return
