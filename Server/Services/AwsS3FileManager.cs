@@ -23,6 +23,7 @@ namespace FileTransferazor.Server.Services
 
         public async Task DeleteFileAsync(string fileName)
         {
+            // TODO: test
             try
             {
                 var deleteObjectRequest = new DeleteObjectRequest
@@ -45,6 +46,8 @@ namespace FileTransferazor.Server.Services
 
         public async Task<TransferFile> DownloadFileAsync(string fileName)
         {
+            // TODO: just return stream
+
             var request = new GetObjectRequest
             {
                 BucketName = _bucket,
@@ -74,9 +77,6 @@ namespace FileTransferazor.Server.Services
 
         public async Task<string> UploadFileAsync(string fileName, Stream fileStream)
         {
-            //var ms = new MemoryStream();
-            //await fileStream.CopyToAsync(ms);
-
             var s3FileName = $"{DateTime.Now.Ticks}-{fileName}";
 
             var transferRequest = new TransferUtilityUploadRequest()
