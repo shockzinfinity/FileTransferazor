@@ -43,6 +43,7 @@ namespace FileTransferazor.Client.Pages
 
             await ExecuteDialog();
             loadedFiles.Clear();
+            // TODO: clear temp datas;
         }
 
         public void HandleSelected(InputFileChangeEventArgs e)
@@ -55,6 +56,8 @@ namespace FileTransferazor.Client.Pages
                 try
                 {
                     loadedFiles.Add(file);
+
+                    // TODO: if images selected, send data uri to client
                 }
                 catch (Exception ex)
                 {
