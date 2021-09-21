@@ -87,7 +87,11 @@ namespace FileTransferazor.Server.Repositories
                 //        fileSendData.ReceiverEmail,
                 //        "You received a new file",
                 //        EmailConstructorHelpers.CreatedNewFileReceivedEmailBody(scheduledFiles, fileSendData.SenderEmail)));
-                _backgroundJobClient.Enqueue<IEmailSender>(e => e.SendEmailApi(
+                //_backgroundJobClient.Enqueue<IEmailSender>(e => e.SendEmailApi(
+                //        fileSendData.ReceiverEmail,
+                //        "You received a new file",
+                //        EmailConstructorHelpers.CreatedNewFileReceivedEmailBody(scheduledFiles, fileSendData.SenderEmail)));
+                _backgroundJobClient.Enqueue<IEmailSender>(e => e.SendEmailWithServiceAccount(
                         fileSendData.ReceiverEmail,
                         "You received a new file",
                         EmailConstructorHelpers.CreatedNewFileReceivedEmailBody(scheduledFiles, fileSendData.SenderEmail)));

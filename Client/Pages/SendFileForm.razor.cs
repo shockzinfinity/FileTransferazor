@@ -32,6 +32,8 @@ namespace FileTransferazor.Client.Pages
             foreach (var item in loadedFiles)
             {
                 var fileStreamContent = new StreamContent(item.OpenReadStream(MaxFileSize));
+
+                // TODO: content-type check (from extension?)
                 fileStreamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(item.ContentType);
                 content.Add(content: fileStreamContent, name: "\"FileToUploads\"", fileName: item.Name);
             }
@@ -44,6 +46,7 @@ namespace FileTransferazor.Client.Pages
             await ExecuteDialog();
             loadedFiles.Clear();
             // TODO: clear temp datas;
+            // TODO: send progress dialog
         }
 
         public void HandleSelected(InputFileChangeEventArgs e)
