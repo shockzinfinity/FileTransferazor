@@ -9,5 +9,6 @@ namespace FileTransferazor.Server.Services
     {
         void SendEmail(string to, string title, string body);
         void SendEmailApi(string to, string title, string body);
+        void SendEmailWithServiceAccount(string to, string title, string body);
     }
 }
