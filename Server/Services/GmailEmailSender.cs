@@ -95,7 +95,7 @@ namespace FileTransferazor.Server.Services
         {
             string[] scopes = { GmailService.Scope.GmailReadonly, GmailService.Scope.GmailSend };
             string applicationName = "fileTransferazorApi";
-            var credentialFile = "filetransferazorapi-453bfcba6aec.json";
+            var credentialFile = "filetransferazorapi-864227e8ceed.json";
             var serviceAccount = "filetransferadmin@filetransferazorapi.iam.gserviceaccount.com";
             var keyFile = JsonSerializer.Deserialize<ServiceAccountKeyFile>(File.ReadAllText(credentialFile));
             var gmailUser = "shockz@ironpot42.com";
