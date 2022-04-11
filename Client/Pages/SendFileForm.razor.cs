@@ -72,7 +72,7 @@ namespace FileTransferazor.Client.Pages
         }
       }
 
-      Snackbar.Add("image selected", Severity.Info);
+      Snackbar.Add($"{e.FileCount} image(s) selected", Severity.Info);
       _isLoading = false;
     }
 
