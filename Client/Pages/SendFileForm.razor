@@ -1,4 +1,6 @@
-﻿<div class="sendFileForm">
+@using System.Linq
+
+<div class="sendFileForm">
     <EditForm Model="_fileSendData" OnValidSubmit="HandleValidSubmit" class="card card-body bg-light mt-5">
         <DataAnnotationsValidator />
         <ValidationSummary />
@@ -8,30 +10,67 @@
                 <MudTextField Label="Receiver Email" @bind-Value="_fileSendData.ReceiverEmail" For="@(() => _fileSendData.ReceiverEmail)" />
 
                 <InputFile id="fileInput" OnChange="HandleSelected" hidden multiple />
-                <MudButton HtmlTag="label" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CloudUpload" Class="my-3" for="fileInput">Upload</MudButton>
-                @if (_isLoading)
+                <MudButton HtmlTag="label" Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.CloudUpload" Class="my-3"
+                           for="fileInput" Disabled="@IsUploading">Upload</MudButton>
+                @if (_isLoading && !_uploadStates.Any())
                 {
                     <p>Loading...</p>
                 }
-                else
+
+                @if (_uploadStates.Any())
                 {
-                    <ul>
-                        @foreach (var item in loadedFiles)
-                        {
-                            <li>
-                                <ul>
-                                    <li>Name: @item.Name</li>
-                                    <li>Last modified: @item.LastModified</li>
-                                    <li>Size (bytes): @item.Size</li>
-                                    <li>Content type: @item.ContentType</li>
-                                </ul>
-                            </li>
-                        }
-                    </ul>
+                    <MudProgressLinear Value="@OverallProgress" Color="Color.Primary" Striped="true" Size="Size.Large" Class="my-3">
+                        <MudText Typo="Typo.body2">
+                            <b>@OverallProgress.ToString("F1")%</b>
+                        </MudText>
+                    </MudProgressLinear>
+
+                    @foreach (var kvp in _uploadStates)
+                    {
+                        var state = kvp.Value;
+                        <MudCard Class="my-2" Elevation="1">
+                            <MudCardContent Class="pa-3">
+                                <div class="d-flex justify-space-between align-center">
+                                    <MudText Typo="Typo.body2">@state.FileName</MudText>
+                                    <MudText Typo="Typo.caption">@FormatBytes(state.BytesUploaded) / @FormatBytes(state.TotalBytes)</MudText>
+                                </div>
+                                <MudProgressLinear Value="@state.ProgressPercent"
+                                                   Color="@(state.HasError ? Color.Error : state.IsComplete ? Color.Success : Color.Info)"
+                                                   Striped="@(!state.IsComplete && !state.HasError)"
+                                                   Class="mt-1" />
+                                @if (state.HasError)
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Error">@state.ErrorMessage</MudText>
+                                }
+                            </MudCardContent>
+                            @if (!state.IsComplete && !state.HasError)
+                            {
+                                <MudCardActions Class="pa-2">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" Size="Size.Small"
+                                                   OnClick="@(() => CancelUpload(kvp.Key))" />
+                                </MudCardActions>
+                            }
+                        </MudCard>
+                    }
+                }
+                else if (loadedFiles.Any())
+                {
+                    @foreach (var item in loadedFiles)
+                    {
+                        <MudCard Class="my-1" Elevation="0">
+                            <MudCardContent Class="pa-2">
+                                <MudText Typo="Typo.body2">@item.Name (@FormatBytes(item.Size))</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    }
                 }
             </MudCardContent>
             <MudCardActions>
-                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Send</MudButton>
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
+                           Class="ml-auto" Disabled="@IsUploading">
+                    @(IsUploading ? "Uploading..." : "Send")
+                </MudButton>
             </MudCardActions>
         </MudCard>
     </EditForm>
