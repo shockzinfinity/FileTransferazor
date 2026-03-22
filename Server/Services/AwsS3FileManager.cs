@@ -42,22 +42,23 @@ namespace FileTransferazor.Server.Services
                 Key = fileName
             };
 
-            using var objectReference = await _s3Client.GetObjectAsync(request);
+            var objectReference = await _s3Client.GetObjectAsync(request);
 
             if (objectReference.HttpStatusCode == HttpStatusCode.NotFound)
             {
+                objectReference.Dispose();
                 throw new FileNotFoundException($"S3에서 파일을 찾을 수 없습니다: {fileName}");
             }
 
-            var memoryStream = new MemoryStream();
-            await objectReference.ResponseStream.CopyToAsync(memoryStream);
-            memoryStream.Position = 0;
-
-            return new TransferFile
+            var transferFile = new TransferFile
             {
                 Name = fileName,
-                Content = memoryStream
+                Content = objectReference.ResponseStream,
+                ContentType = objectReference.Headers.ContentType ?? "application/octet-stream"
             };
+            transferFile.SetResponseReference(objectReference);
+
+            return transferFile;
         }
 
         public async Task<string> UploadFileAsync(string fileName, string contentType, Stream fileStream)
