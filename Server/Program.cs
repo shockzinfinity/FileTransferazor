@@ -7,17 +7,22 @@ using Amazon;
 using Amazon.S3;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using tusdotnet;
+using tusdotnet.Models;
+using tusdotnet.Models.Configuration;
+using tusdotnet.Stores;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Options
 builder.Services.Configure<AwsS3Options>(builder.Configuration.GetSection(AwsS3Options.SectionName));
 builder.Services.Configure<GmailOptions>(builder.Configuration.GetSection(GmailOptions.SectionName));
+builder.Services.Configure<TusOptions>(builder.Configuration.GetSection(TusOptions.SectionName));
 
-// Kestrel - 10 GB max request body
+// Kestrel - disable max request body size (tusdotnet manages its own limit)
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.Limits.MaxRequestBodySize = 10L * 1024L * 1024L * 1024L;
+    options.Limits.MaxRequestBodySize = null;
 });
 
 // Database
@@ -37,12 +42,19 @@ builder.Services.AddScoped<IAwsS3FileManager, AwsS3FileManager>();
 builder.Services.AddScoped<IFileRepository, FileRepository>();
 builder.Services.AddScoped<IEmailSender, GmailEmailSender>();
 
+// Tus
+builder.Services.AddSingleton<TusUploadService>();
+
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
 var app = builder.Build();
 
-// Hangfire Dashboard: Development 환경에서만 접근 허용
+// Ensure tus storage directory exists
+var tusOptions = builder.Configuration.GetSection(TusOptions.SectionName).Get<TusOptions>() ?? new TusOptions();
+Directory.CreateDirectory(tusOptions.StoragePath);
+
+// Hangfire Dashboard: Development only
 if (app.Environment.IsDevelopment())
 {
     app.UseHangfireDashboard();
@@ -67,6 +79,31 @@ app.UseRouting();
 
 app.MapRazorPages();
 app.MapControllers();
+
+app.MapTus("/api/tus", async httpContext =>
+{
+    var tusUploadService = httpContext.RequestServices.GetRequiredService<TusUploadService>();
+
+    return new DefaultTusConfiguration
+    {
+        Store = new TusDiskStore(tusOptions.StoragePath),
+        MaxAllowedUploadSizeInBytesLong = tusOptions.MaxFileSizeInBytes,
+        Events = new Events
+        {
+            OnBeforeCreateAsync = ctx =>
+            {
+                var metadata = ctx.Metadata;
+                if (!metadata.ContainsKey("senderEmail") || !metadata.ContainsKey("receiverEmail"))
+                {
+                    ctx.FailRequest("senderEmail and receiverEmail metadata are required");
+                }
+                return Task.CompletedTask;
+            },
+            OnFileCompleteAsync = ctx => tusUploadService.OnFileCompleteAsync(ctx)
+        }
+    };
+});
+
 app.MapFallbackToFile("index.html");
 
 app.Run();

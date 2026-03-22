@@ -12,5 +12,15 @@ namespace FileTransferazor.Server.Data
 
         public DbSet<FileSendData> FileSendDatas { get; set; }
         public DbSet<FileStorageData> FileStorageDatas { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<FileSendData>()
+                .HasIndex(f => f.GroupId)
+                .IsUnique()
+                .HasFilter("[GroupId] IS NOT NULL");
+        }
     }
 }

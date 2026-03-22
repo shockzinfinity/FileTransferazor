@@ -10,5 +10,6 @@ namespace FileTransferazor.Shared
         public string SenderEmail { get; set; }
         [DataType(DataType.EmailAddress)]
         public string ReceiverEmail { get; set; }
+        public string? GroupId { get; set; }
     }
 }
