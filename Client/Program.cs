@@ -18,4 +18,6 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.MaxDisplayedSnackbars = 3;
 });
 
+builder.Services.AddScoped<FileTransferazor.Client.Services.TusInteropService>();
+
 await builder.Build().RunAsync();
