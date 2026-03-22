@@ -25,8 +25,8 @@ namespace FileTransferazor.Server.Controllers
                 return Redirect("/");
             }
 
-            var contentType = "application/octet-stream";
-            return File(file.Content, contentType, file.Name);
+            HttpContext.Response.RegisterForDispose(file);
+            return File(file.Content, file.ContentType, file.Name, enableRangeProcessing: false);
         }
     }
 }
