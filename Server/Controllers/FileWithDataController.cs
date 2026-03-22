@@ -1,11 +1,8 @@
-﻿using Amazon.Runtime.Internal.Util;
 using FileTransferazor.Server.Models;
 using FileTransferazor.Server.Repositories;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -26,14 +23,10 @@ namespace FileTransferazor.Server.Controllers
         }
 
         [HttpPost]
-        //[DisableFormValueModelBinding] // NOTE: form data binding 안됨
         [RequestSizeLimit(MaxFileSize)]
         [RequestFormLimits(MultipartBodyLengthLimit = MaxFileSize)]
         public async Task<IActionResult> Upload([FromForm] FormDataDto dto)
         {
-            // TODO: uploadresult return
-            // TODO: server resources monitoring
-
             if (dto.FileToUploads.Count == 0 || dto.FileToUploads.Any(f => f.Length == 0))
             {
                 return BadRequest("Upload one more files or not empty file.");
@@ -46,7 +39,6 @@ namespace FileTransferazor.Server.Controllers
 
             await _fileRepository.UploadFileToS3Async(dto.Data, dto.FileToUploads);
 
-            // TODO: return Created
             return Ok();
         }
     }

@@ -1,9 +1,6 @@
-﻿using FileTransferazor.Server.Repositories;
-using Microsoft.AspNetCore.Http;
+using FileTransferazor.Server.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace FileTransferazor.Server.Controllers
@@ -28,10 +25,7 @@ namespace FileTransferazor.Server.Controllers
                 return Redirect("/");
             }
 
-            // NOTE: multiple files => doesn't need it because the receiver click individual link
-            //var content = new System.IO.MemoryStream(file.Content);
             var contentType = "application/octet-stream";
-
             return File(file.Content, contentType, file.Name);
         }
     }

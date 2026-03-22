@@ -1,74 +1,71 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Mail;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Amazon.Runtime.Internal.Util;
-using Amazon.Util.Internal;
+using FileTransferazor.Server.Options;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Gmail.v1;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Options;
 
 namespace FileTransferazor.Server.Services
 {
-    // TODO: use GCP
     public class GmailEmailSender : IEmailSender
     {
         private readonly AwsParameterStoreClient _awsParameterStoreClient;
         private readonly ILogger<GmailEmailSender> _logger;
+        private readonly GmailOptions _gmailOptions;
 
-        public GmailEmailSender(AwsParameterStoreClient awsParameterStoreClient, ILogger<GmailEmailSender> logger)
+        public GmailEmailSender(
+            AwsParameterStoreClient awsParameterStoreClient,
+            ILogger<GmailEmailSender> logger,
+            IOptionsSnapshot<GmailOptions> gmailOptions)
         {
             _awsParameterStoreClient = awsParameterStoreClient ?? throw new ArgumentNullException(nameof(awsParameterStoreClient));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _gmailOptions = gmailOptions.Value;
         }
 
-        public async void SendEmail(string to, string title, string body)
+        public async Task SendEmailAsync(string to, string title, string body)
         {
-            using (var client = new SmtpClient("smtp.gmail.com", 587))
-            {
-                client.UseDefaultCredentials = false;
-                client.EnableSsl = true;
+            using var client = new SmtpClient("smtp.gmail.com", 587);
+            client.UseDefaultCredentials = false;
+            client.EnableSsl = true;
 
-                var username = await _awsParameterStoreClient.GetValueAsync("SMTP-username");
-                var password = await _awsParameterStoreClient.GetValueAsync("SMTP-password");
+            var username = await _awsParameterStoreClient.GetValueAsync("SMTP-username");
+            var password = await _awsParameterStoreClient.GetValueAsync("SMTP-password");
 
-                client.Credentials = new NetworkCredential(username, password);
-                client.DeliveryMethod = SmtpDeliveryMethod.Network;
+            client.Credentials = new NetworkCredential(username, password);
+            client.DeliveryMethod = SmtpDeliveryMethod.Network;
 
-                MailMessage mailMessage = new();
-                mailMessage.From = new MailAddress(username);
-                mailMessage.To.Add(to);
-                mailMessage.Subject = title;
-                mailMessage.Body = body;
+            MailMessage mailMessage = new();
+            mailMessage.From = new MailAddress(username);
+            mailMessage.To.Add(to);
+            mailMessage.Subject = title;
+            mailMessage.Body = body;
 
-                client.Send(mailMessage);
-            }
+            client.Send(mailMessage);
         }
 
-        public async void SendEmailApi(string to, string title, string body)
+        public async Task SendEmailApiAsync(string to, string title, string body)
         {
             string[] scopes = { GmailService.Scope.GmailReadonly, GmailService.Scope.GmailSend };
             string applicationName = "fileTransferazorApi";
 
             UserCredential credential;
-            using (var stream = new FileStream("credential.json", FileMode.Open, FileAccess.Read))
+            using (var stream = new FileStream(_gmailOptions.CredentialFilePath, FileMode.Open, FileAccess.Read))
             {
                 string credPath = "token.json";
                 credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
                     GoogleClientSecrets.FromStream(stream).Secrets,
                     scopes,
-                    "shockz@ironpot42.com",
+                    _gmailOptions.GmailUser,
                     CancellationToken.None,
                     new FileDataStore(credPath, true));
             }
@@ -79,33 +76,32 @@ namespace FileTransferazor.Server.Services
                 ApplicationName = applicationName
             });
 
+            var fromEncoded = Base64UrlEncode("File TransferazorApp");
             StringBuilder sbMailCont = new StringBuilder();
-            sbMailCont.AppendFormat("From: =?UTF-8?B?{1}?=<~~~~~~~@gmail.com>{0}", System.Environment.NewLine, Base64UrlEncode("File TransferazorApp"));
-            sbMailCont.AppendFormat("To: {1}{0}", System.Environment.NewLine, to);
-            sbMailCont.AppendFormat("Subject: =?UTF-8?B?{1}?={0}", System.Environment.NewLine, Base64UrlEncode(title));
-            sbMailCont.AppendFormat("Content-Type: text/html; charset=utf-8{0}", System.Environment.NewLine);
-            sbMailCont.AppendFormat("{0}{1}", System.Environment.NewLine, body);
+            sbMailCont.AppendFormat("From: =?UTF-8?B?{1}?=<{2}>{0}", Environment.NewLine, fromEncoded, _gmailOptions.FromAddress);
+            sbMailCont.AppendFormat("To: {1}{0}", Environment.NewLine, to);
+            sbMailCont.AppendFormat("Subject: =?UTF-8?B?{1}?={0}", Environment.NewLine, Base64UrlEncode(title));
+            sbMailCont.AppendFormat("Content-Type: text/html; charset=utf-8{0}", Environment.NewLine);
+            sbMailCont.AppendFormat("{0}{1}", Environment.NewLine, body);
 
             var message = new Google.Apis.Gmail.v1.Data.Message();
             message.Raw = Base64UrlEncode(sbMailCont.ToString());
-            service.Users.Messages.Send(message, "me").Execute();
+            await service.Users.Messages.Send(message, "me").ExecuteAsync();
         }
 
-        public async void SendEmailWithServiceAccount(string to, string title, string body)
+        public async Task SendEmailWithServiceAccountAsync(string to, string title, string body)
         {
             string[] scopes = { GmailService.Scope.GmailReadonly, GmailService.Scope.GmailSend };
             string applicationName = "fileTransferazorApi";
-            var credentialFile = "filetransferazorapi-864227e8ceed.json";
-            var serviceAccount = "filetransferadmin@filetransferazorapi.iam.gserviceaccount.com";
-            var keyFile = JsonSerializer.Deserialize<ServiceAccountKeyFile>(File.ReadAllText(credentialFile));
-            var gmailUser = "shockz@ironpot42.com";
-            var serviceAccountCredentilalInitializer = new ServiceAccountCredential.Initializer(serviceAccount)
+            var keyFile = JsonSerializer.Deserialize<ServiceAccountKeyFile>(
+                File.ReadAllText(_gmailOptions.ServiceAccountCredentialFilePath));
+            var serviceAccountCredentialInitializer = new ServiceAccountCredential.Initializer(_gmailOptions.ServiceAccountEmail)
             {
-                User = gmailUser,
+                User = _gmailOptions.GmailUser,
                 Scopes = scopes
             }.FromPrivateKey(keyFile.private_key);
-            var credential = new ServiceAccountCredential(serviceAccountCredentilalInitializer);
-            if (!credential.RequestAccessTokenAsync(CancellationToken.None).Result)
+            var credential = new ServiceAccountCredential(serviceAccountCredentialInitializer);
+            if (!await credential.RequestAccessTokenAsync(CancellationToken.None))
                 throw new InvalidOperationException("Access token failed.");
 
             var service = new GmailService(new BaseClientService.Initializer()
@@ -114,6 +110,7 @@ namespace FileTransferazor.Server.Services
                 ApplicationName = applicationName
             });
 
+            var gmailUser = _gmailOptions.GmailUser;
             StringBuilder sbMailCont = new StringBuilder();
             sbMailCont.AppendFormat($"From: =?UTF-8?B?{Base64UrlEncode("File Transferazor Api")}?=<{gmailUser}>{Environment.NewLine}");
             sbMailCont.AppendFormat($"To: {to}{Environment.NewLine}");

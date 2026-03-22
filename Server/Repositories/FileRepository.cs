@@ -1,4 +1,3 @@
-﻿using Amazon.Runtime.Internal.Util;
 using FileTransferazor.Server.Data;
 using FileTransferazor.Server.Services;
 using FileTransferazor.Shared;
@@ -9,7 +8,6 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace FileTransferazor.Server.Repositories
@@ -31,7 +29,6 @@ namespace FileTransferazor.Server.Repositories
 
         public async Task<TransferFile> DownloadFileAsync(string fileName)
         {
-            // TODO: gzip
             var dbFileData = await _dbContext.FileStorageDatas.Include(f => f.FileSendData).SingleOrDefaultAsync(f => f.FileUri == fileName);
             if (dbFileData == null)
             {
@@ -57,13 +54,8 @@ namespace FileTransferazor.Server.Repositories
 
             foreach (var item in files)
             {
-                // TODO: upload result list
-                // TODO: server file validation
-                // TODO: anti malware, virus scan
-                // TODO: file name html encoding
-                // TODO: gzip
-
-                var s3FileName = await _s3FileManager.UploadFileAsync(Path.GetRandomFileName(), item.OpenReadStream());
+                var contentType = item.ContentType ?? "application/octet-stream";
+                var s3FileName = await _s3FileManager.UploadFileAsync(Path.GetRandomFileName(), contentType, item.OpenReadStream());
                 scheduledFiles.Add(s3FileName);
                 _dbContext.FileStorageDatas.Add(new FileStorageData
                 {
@@ -76,29 +68,10 @@ namespace FileTransferazor.Server.Repositories
 
             await _dbContext.SaveChangesAsync();
 
-            if (scheduledFiles.Count > 0)
+            foreach (var item in scheduledFiles)
             {
-                foreach (var item in scheduledFiles)
-                {
-                    _backgroundJobClient.Schedule<IAwsS3FileManager>(f => f.DeleteFileAsync(item), TimeSpan.FromHours(24));
-
-                }
-                //_backgroundJobClient.Enqueue<IEmailSender>(e => e.SendEmail(
-                //        fileSendData.ReceiverEmail,
-                //        "You received a new file",
-                //        EmailConstructorHelpers.CreatedNewFileReceivedEmailBody(scheduledFiles, fileSendData.SenderEmail)));
-
-                //_backgroundJobClient.Enqueue<IEmailSender>(e => e.SendEmailApi(
-                //        fileSendData.ReceiverEmail,
-                //        "You received a new file",
-                //        EmailConstructorHelpers.CreatedNewFileReceivedEmailBody(scheduledFiles, fileSendData.SenderEmail)));
-
-                //_backgroundJobClient.Enqueue<IEmailSender>(e => e.SendEmailWithServiceAccount(
-                //        fileSendData.ReceiverEmail,
-                //        "You received a new file",
-                //        EmailConstructorHelpers.CreatedNewFileReceivedEmailBody(scheduledFiles, fileSendData.SenderEmail)));
+                _backgroundJobClient.Schedule<IAwsS3FileManager>(f => f.DeleteFileAsync(item), TimeSpan.FromHours(24));
             }
-
         }
     }
 }

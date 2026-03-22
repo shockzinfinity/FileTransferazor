@@ -1,11 +1,12 @@
-﻿using Amazon.S3;
+using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
+using FileTransferazor.Server.Options;
 using FileTransferazor.Shared;
+using Microsoft.Extensions.Options;
+// IOptionsSnapshot: Scoped 수명 — 요청마다 appsettings.json 변경 사항을 재배포 없이 반영
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 
@@ -16,70 +17,56 @@ namespace FileTransferazor.Server.Services
         private readonly IAmazonS3 _s3Client;
         private readonly string _bucket;
 
-        public AwsS3FileManager(IAmazonS3 s3Client)
+        public AwsS3FileManager(IAmazonS3 s3Client, IOptionsSnapshot<AwsS3Options> options)
         {
             _s3Client = s3Client ?? throw new ArgumentNullException(nameof(s3Client));
-            _bucket = "transferazor-bucket";
+            _bucket = options.Value.BucketName;
         }
 
         public async Task DeleteFileAsync(string fileName)
         {
-            // TODO: test
-            try
+            var deleteObjectRequest = new DeleteObjectRequest
             {
-                var deleteObjectRequest = new DeleteObjectRequest
-                {
-                    BucketName = _bucket,
-                    Key = fileName
-                };
+                BucketName = _bucket,
+                Key = fileName
+            };
 
-                var result = await _s3Client.DeleteObjectAsync(deleteObjectRequest);
-            }
-            catch (AmazonS3Exception)
-            {
-                throw;
-            }
-            catch (Exception)
-            {
-                throw;
-            }
+            await _s3Client.DeleteObjectAsync(deleteObjectRequest);
         }
 
         public async Task<TransferFile> DownloadFileAsync(string fileName)
         {
-            // TODO: just return stream
-
             var request = new GetObjectRequest
             {
                 BucketName = _bucket,
                 Key = fileName
             };
 
-            using (var objectReference = await _s3Client.GetObjectAsync(request))
-            {
-                if (objectReference.HttpStatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    throw new Exception("Could not find file.");
-                }
+            using var objectReference = await _s3Client.GetObjectAsync(request);
 
-                using (var responseStream = objectReference.ResponseStream)
-                {
-                    return new TransferFile
-                    {
-                        Name = fileName,
-                        Content = responseStream
-                    };
-                }
+            if (objectReference.HttpStatusCode == HttpStatusCode.NotFound)
+            {
+                throw new FileNotFoundException($"S3에서 파일을 찾을 수 없습니다: {fileName}");
             }
+
+            var memoryStream = new MemoryStream();
+            await objectReference.ResponseStream.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+
+            return new TransferFile
+            {
+                Name = fileName,
+                Content = memoryStream
+            };
         }
 
-        public async Task<string> UploadFileAsync(string fileName, Stream fileStream)
+        public async Task<string> UploadFileAsync(string fileName, string contentType, Stream fileStream)
         {
-            var s3FileName = $"{DateTime.Now.Ticks}-{WebUtility.HtmlEncode(fileName)}";
+            var s3FileName = $"{DateTime.UtcNow.Ticks}-{WebUtility.HtmlEncode(fileName)}";
 
             var transferRequest = new TransferUtilityUploadRequest()
             {
-                ContentType = "application/zip",
+                ContentType = contentType,
                 InputStream = fileStream,
                 BucketName = _bucket,
                 Key = s3FileName

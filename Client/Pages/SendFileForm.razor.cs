@@ -48,7 +48,7 @@ namespace FileTransferazor.Client.Pages
       // TODO: send progress dialog
     }
 
-    public async void HandleSelected(InputFileChangeEventArgs e)
+    public async Task HandleSelected(InputFileChangeEventArgs e)
     {
       _isLoading = true;
       loadedFiles.Clear();
@@ -85,9 +85,9 @@ namespace FileTransferazor.Client.Pages
                 { "ButtonText", buttonText }
             };
 
-      var dialog = Dialog.Show<DialogNotification>(title, parameters);
+      var dialog = await Dialog.ShowAsync<DialogNotification>(title, parameters);
       var result = await dialog.Result;
-      if (!result.Cancelled) {
+      if (!result.Canceled) {
         bool.TryParse(result.Data.ToString(), out bool shouldNavigate);
         if (shouldNavigate) NavigationManager.NavigateTo("/");
       }
