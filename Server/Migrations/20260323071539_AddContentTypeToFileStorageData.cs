@@ -1,22 +1,28 @@
 ﻿using Microsoft.EntityFrameworkCore.Migrations;
 
+#nullable disable
+
 namespace FileTransferazor.Server.Migrations
 {
-    public partial class originalFilename : Migration
+    /// <inheritdoc />
+    public partial class AddContentTypeToFileStorageData : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<string>(
-                name: "OriginalFileName",
+                name: "ContentType",
                 table: "FileStorageDatas",
-                type: "nvarchar(max)",
-                nullable: true);
+                type: "text",
+                nullable: false,
+                defaultValue: "application/octet-stream");
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "OriginalFileName",
+                name: "ContentType",
                 table: "FileStorageDatas");
         }
     }

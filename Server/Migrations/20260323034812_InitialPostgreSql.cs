@@ -1,19 +1,25 @@
 ﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+
+#nullable disable
 
 namespace FileTransferazor.Server.Migrations
 {
-    public partial class FileData : Migration
+    /// <inheritdoc />
+    public partial class InitialPostgreSql : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
                 name: "FileSendDatas",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    SenderEmail = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ReceiverEmail = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    SenderEmail = table.Column<string>(type: "text", nullable: false),
+                    ReceiverEmail = table.Column<string>(type: "text", nullable: false),
+                    GroupId = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -24,10 +30,11 @@ namespace FileTransferazor.Server.Migrations
                 name: "FileStorageDatas",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    FileSendDataId = table.Column<int>(type: "int", nullable: false),
-                    FileUri = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    FileSendDataId = table.Column<int>(type: "integer", nullable: false),
+                    FileUri = table.Column<string>(type: "text", nullable: false),
+                    OriginalFileName = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -41,11 +48,19 @@ namespace FileTransferazor.Server.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_FileSendDatas_GroupId",
+                table: "FileSendDatas",
+                column: "GroupId",
+                unique: true,
+                filter: "\"GroupId\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_FileStorageDatas_FileSendDataId",
                 table: "FileStorageDatas",
                 column: "FileSendDataId");
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(

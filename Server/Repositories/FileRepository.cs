@@ -16,14 +16,14 @@ namespace FileTransferazor.Server.Repositories
     {
         private readonly FileTransferazorDbContext _dbContext;
         private readonly ILogger<FileRepository> _logger;
-        private readonly IAwsS3FileManager _s3FileManager;
+        private readonly IFileStorageProvider _fileStorage;
         private readonly IBackgroundJobClient _backgroundJobClient;
 
-        public FileRepository(FileTransferazorDbContext dbContext, ILogger<FileRepository> logger, IAwsS3FileManager s3FileManager, IBackgroundJobClient backgroundJobClient)
+        public FileRepository(FileTransferazorDbContext dbContext, ILogger<FileRepository> logger, IFileStorageProvider fileStorage, IBackgroundJobClient backgroundJobClient)
         {
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _s3FileManager = s3FileManager ?? throw new ArgumentNullException(nameof(s3FileManager));
+            _fileStorage = fileStorage ?? throw new ArgumentNullException(nameof(fileStorage));
             _backgroundJobClient = backgroundJobClient ?? throw new ArgumentNullException(nameof(backgroundJobClient));
         }
 
@@ -35,13 +35,15 @@ namespace FileTransferazor.Server.Repositories
                 return new TransferFile();
             }
 
-            var file = await _s3FileManager.DownloadFileAsync(fileName);
+            var file = await _fileStorage.DownloadFileAsync(fileName);
+            file.ContentType = dbFileData.ContentType;
+            file.Name = dbFileData.OriginalFileName;
 
             _dbContext.FileSendDatas.Remove(dbFileData.FileSendData);
             _dbContext.FileStorageDatas.Remove(dbFileData);
             await _dbContext.SaveChangesAsync();
 
-            _backgroundJobClient.Schedule<IAwsS3FileManager>(a => a.DeleteFileAsync(fileName), TimeSpan.FromMinutes(30));
+            _backgroundJobClient.Schedule<IFileStorageProvider>(a => a.DeleteFileAsync(fileName), TimeSpan.FromMinutes(30));
 
             return file;
         }
@@ -55,14 +57,15 @@ namespace FileTransferazor.Server.Repositories
             foreach (var item in files)
             {
                 var contentType = item.ContentType ?? "application/octet-stream";
-                var s3FileName = await _s3FileManager.UploadFileAsync(Path.GetRandomFileName(), contentType, item.OpenReadStream());
+                var s3FileName = await _fileStorage.UploadFileAsync(item.FileName, contentType, item.OpenReadStream());
                 scheduledFiles.Add(s3FileName);
                 _dbContext.FileStorageDatas.Add(new FileStorageData
                 {
                     FileSendDataId = fileSendData.Id,
                     FileSendData = fileSendData,
                     FileUri = s3FileName,
-                    OriginalFileName = item.FileName
+                    OriginalFileName = FileNameNormalizer.Normalize(item.FileName),
+                    ContentType = contentType
                 });
             }
 
@@ -70,7 +73,7 @@ namespace FileTransferazor.Server.Repositories
 
             foreach (var item in scheduledFiles)
             {
-                _backgroundJobClient.Schedule<IAwsS3FileManager>(f => f.DeleteFileAsync(item), TimeSpan.FromHours(24));
+                _backgroundJobClient.Schedule<IFileStorageProvider>(f => f.DeleteFileAsync(item), TimeSpan.FromHours(24));
             }
         }
     }

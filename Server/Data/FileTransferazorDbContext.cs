@@ -20,7 +20,7 @@ namespace FileTransferazor.Server.Data
             modelBuilder.Entity<FileSendData>()
                 .HasIndex(f => f.GroupId)
                 .IsUnique()
-                .HasFilter("[GroupId] IS NOT NULL");
+                .HasFilter("\"GroupId\" IS NOT NULL");
         }
     }
 }

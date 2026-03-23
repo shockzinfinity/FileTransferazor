@@ -7,6 +7,7 @@ using Amazon;
 using Amazon.S3;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using Hangfire.PostgreSql;
 using tusdotnet;
 using tusdotnet.Models;
 using tusdotnet.Models.Configuration;
@@ -28,17 +29,33 @@ builder.WebHost.ConfigureKestrel(options =>
 // Database
 builder.Services.AddDbContext<FileTransferazorDbContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    // options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 
 // Hangfire
-builder.Services.AddHangfire(x => x.UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
+// builder.Services.AddHangfire(x => x.UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddHangfire(x => x.UsePostgreSqlStorage(c =>
+    c.UseNpgsqlConnection(builder.Configuration.GetConnectionString("DefaultConnection"))));
 builder.Services.AddHangfireServer();
 
-// AWS & Services
+// AWS (GmailEmailSender에서도 사용하므로 항상 등록)
 builder.Services.AddScoped(sp => new AwsParameterStoreClient(RegionEndpoint.APNortheast2));
-builder.Services.AddAWSService<IAmazonS3>();
-builder.Services.AddScoped<IAwsS3FileManager, AwsS3FileManager>();
+
+// File Storage Provider (S3 or Local)
+var fileStorageProvider = builder.Configuration.GetValue<string>("FileStorage:Provider") ?? "Local";
+if (fileStorageProvider.Equals("S3", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddAWSService<IAmazonS3>();
+    builder.Services.AddScoped<IFileStorageProvider, AwsS3FileManager>();
+}
+else
+{
+    builder.Services.Configure<LocalFileStorageOptions>(
+        builder.Configuration.GetSection(LocalFileStorageOptions.SectionName));
+    builder.Services.AddScoped<IFileStorageProvider, LocalFileStorageProvider>();
+}
+
 builder.Services.AddScoped<IFileRepository, FileRepository>();
 builder.Services.AddScoped<IEmailSender, GmailEmailSender>();
 
@@ -53,6 +70,15 @@ var app = builder.Build();
 // Ensure tus storage directory exists
 var tusOptions = builder.Configuration.GetSection(TusOptions.SectionName).Get<TusOptions>() ?? new TusOptions();
 Directory.CreateDirectory(tusOptions.StoragePath);
+
+// Clean up stale tus temp files on startup (older than ExpirationHours)
+foreach (var file in Directory.GetFiles(tusOptions.StoragePath))
+{
+    if (File.GetLastWriteTimeUtc(file) < DateTime.UtcNow.AddHours(-tusOptions.ExpirationHours))
+    {
+        File.Delete(file);
+    }
+}
 
 // Hangfire Dashboard: Development only
 if (app.Environment.IsDevelopment())
@@ -92,11 +118,21 @@ app.MapTus("/api/tus", async httpContext =>
         {
             OnBeforeCreateAsync = ctx =>
             {
+                var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<TusUploadService>>();
+                var filename = ctx.Metadata.TryGetValue("filename", out var fn) ? fn.GetString(System.Text.Encoding.UTF8) : "unknown";
+                logger.LogInformation("tus CREATE: {Filename}, UploadLength={Length}", filename, ctx.UploadLength);
+
                 var metadata = ctx.Metadata;
                 if (!metadata.ContainsKey("senderEmail") || !metadata.ContainsKey("receiverEmail"))
                 {
                     ctx.FailRequest("senderEmail and receiverEmail metadata are required");
                 }
+                return Task.CompletedTask;
+            },
+            OnBeforeWriteAsync = ctx =>
+            {
+                var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<TusUploadService>>();
+                logger.LogInformation("tus WRITE: FileId={FileId}, Offset={Offset}", ctx.FileId, ctx.UploadOffset);
                 return Task.CompletedTask;
             },
             OnFileCompleteAsync = ctx => tusUploadService.OnFileCompleteAsync(ctx)

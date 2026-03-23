@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace FileTransferazor.Server.Services
 {
-    public class AwsS3FileManager : IAwsS3FileManager
+    public class AwsS3FileManager : IFileStorageProvider
     {
         private readonly IAmazonS3 _s3Client;
         private readonly string _bucket;
@@ -53,8 +53,7 @@ namespace FileTransferazor.Server.Services
             var transferFile = new TransferFile
             {
                 Name = fileName,
-                Content = objectReference.ResponseStream,
-                ContentType = objectReference.Headers.ContentType ?? "application/octet-stream"
+                Content = objectReference.ResponseStream
             };
             transferFile.SetResponseReference(objectReference);
 
@@ -63,7 +62,8 @@ namespace FileTransferazor.Server.Services
 
         public async Task<string> UploadFileAsync(string fileName, string contentType, Stream fileStream)
         {
-            var s3FileName = $"{DateTime.UtcNow.Ticks}-{WebUtility.HtmlEncode(fileName)}";
+            var extension = SanitizeExtension(fileName);
+            var s3FileName = $"{DateTime.UtcNow.Ticks}-{Guid.NewGuid():N}{extension}";
 
             var transferRequest = new TransferUtilityUploadRequest()
             {
@@ -78,6 +78,16 @@ namespace FileTransferazor.Server.Services
             await fileTransferUtility.UploadAsync(transferRequest);
 
             return s3FileName;
+        }
+
+        private static string SanitizeExtension(string fileName)
+        {
+            var ext = Path.GetExtension(fileName);
+            if (string.IsNullOrEmpty(ext))
+                return string.Empty;
+
+            ext = System.Text.RegularExpressions.Regex.Replace(ext, @"[^a-zA-Z0-9.\-]", "");
+            return string.IsNullOrEmpty(ext) ? string.Empty : $".{ext.TrimStart('.')}";
         }
     }
 }
