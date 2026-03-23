@@ -1,4 +1,29 @@
 {
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=fileTransferazorDb;Username=admin;Password=YOUR_PASSWORD;Pooling=true;Minimum Pool Size=2;Maximum Pool Size=10;Keepalive=30;Timeout=15;Command Timeout=30"
+  },
+  "FileStorage": {
+    "Provider": "Local"
+  },
+  "LocalFileStorage": {
+    "StoragePath": "/tmp/filetransferazor-storage"
+  },
+  "AwsS3": {
+    "BucketName": "your-bucket-name"
+  },
+  "Gmail": {
+    "GmailUser": "",
+    "FromAddress": "",
+    "CredentialFilePath": "",
+    "ServiceAccountCredentialFilePath": "",
+    "ServiceAccountEmail": ""
+  },
+  "Tus": {
+    "StoragePath": "/tmp/tusfiles",
+    "MaxFileSizeInBytes": 10737418240,
+    "ChunkSizeInBytes": 5242880,
+    "ExpirationHours": 24
+  },
   "Logging": {
     "LogLevel": {
       "Default": "Information",
@@ -6,5 +31,5 @@
       "Microsoft.Hosting.Lifetime": "Information"
     }
   },
-"AllowedHosts": "*"
+  "AllowedHosts": "*"
 }
